@@ -41,6 +41,7 @@ def compute_multi_level_ofi(
     
     Args:
         - df (pd.DataFrame): DataFrame containing the bid and ask prices and sizes.
+        - levels (int): Number of levels to compute the OFI for.
     
     Returns:
         - pd.Series: A Series containing the multi-level OFI values.
@@ -77,6 +78,7 @@ def compute_integrated_ofi(
     
     Args:
         - df (pd.DataFrame): DataFrame containing the bid and ask prices and sizes.
+        - levels (int): Number of levels to compute the OFI for.
     
     Returns:
         - pd.Series: A Series containing the integrated OFI values.
@@ -105,4 +107,6 @@ def compute_integrated_ofi(
     principal_component = pca.fit_transform(matrix).flatten()
     weights = pca.components_[0]
     integrated = principal_component / np.sum(np.abs(weights))
+    most_important_level = np.argmax(np.abs(weights))
+    print(f" -- Most important level for integrated OFI: {most_important_level + 1} (weight: {round(weights[most_important_level], 3)})")
     return pd.Series(integrated, index=df.index, name="integrated_ofi")
