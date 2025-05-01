@@ -3,36 +3,33 @@ from time import time
 from src.utils import *
 from src.ofi_features import *
 
-
 def main():
-    print("-" * 100)
-    print(">> | Loading data | <<")
-    input_path = "data/first_25000_rows.csv"
-    df = pd.read_csv(input_path)
+    df = pd.read_csv("data/first_25000_rows.csv")
 
-    print(f">> | Computing best-level OFI for {len(df)} rows | <<")
-    best_ofi = compute_best_level_ofi(df)
-    df["best_level_ofi"] = best_ofi
+    print(" -- Computing Best-Level OFI")
+    df["best_level_ofi"] = compute_best_level_ofi(df)
+    print(" -- Computing Multi-Level OFI")
+    df["multi_level_ofi"] = compute_multi_level_ofi(df)
+    print(" -- Computing Integrated OFI")
+    df["integrated_ofi"] = compute_integrated_ofi(df)
+
+    print(" -- Saving features to CSV: output/ofi_features.csv")
+    df.to_csv("output/ofi_features.csv", index=False)
+
+    print(" -- Plotting features")
     plot_best_level_ofi(df)
-
-    print(f">> | Computing multi-level OFI for {len(df)} rows | <<")
-    multilevel_ofi_df = compute_multi_level_ofi(df, levels=10)
-    df = pd.concat([df, multilevel_ofi_df], axis=1)
-    plot_multi_level_ofi_subplots(df, levels=10)
-    
-    # df = df[["ts_event", "bid_px_00", "bid_sz_00", "ask_px_00", "ask_sz_00", "best_level_ofi", "multi_level_ofi"]]
-
-    output_path = "output/ofi_features.csv"
-    df.to_csv(output_path, index=False)
-    print("-" * 100)
-
+    plot_multi_level_ofi(df)
+    plot_integrated_ofi(df)
 
 if __name__ == "__main__":
-    start_time = time() 
+    start_time = time()
+    print("-" * 100)
+    print(">> | OFI Feature Construction | <<")
+    print("-" * 100)
     main()
     end_time = time()
     hrs, mins = divmod(end_time - start_time, 3600)
     mins, secs = divmod(mins, 60)
-    print(f">> | Time taken: {int(hrs)} hrs {int(mins)} mins {int(secs)} secs | <<")
-    print(f">> | Output saved to: `output/ofi_features.csv` | <<")
+    print("-" * 100)
+    print(f">> | Execution time: {int(hrs)} hours, {int(mins)} minutes, {int(secs)} seconds | <<")
     print("-" * 100)

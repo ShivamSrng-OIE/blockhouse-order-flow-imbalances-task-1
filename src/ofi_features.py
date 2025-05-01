@@ -1,108 +1,108 @@
 import pandas as pd
+import numpy as np
+from sklearn.decomposition import PCA
 
 def compute_best_level_ofi(
         df: pd.DataFrame
     ) -> pd.Series:
     """
-    Compute Best-Level Order Flow Imbalance (OFI) using level 0 bid/ask price and size.
-    OFI tells us whether there's more buying pressure or selling pressure.
-
+    Compute the best-level order flow imbalance (OFI) for a given DataFrame. The OFI is calculated based on the bid and ask prices and sizes at the best level.
+    
     Args:
-        - df (pd.DataFrame): DataFrame with order book data. Should contain bid_px_00, ask_px_00, bid_sz_00, ask_sz_00 columns.
-
+        - df (pd.DataFrame): DataFrame containing the bid and ask prices and sizes.
+    
     Returns:
-        - pd.Series: A column of OFI values (one per row, same length as df)
+        - pd.Series: A Series containing the best-level OFI values.
     """
-
+    
     ofi_values = [0]
     for i in range(1, len(df)):
-        prev_bid_px = df.loc[i-1, "bid_px_00"]
-        prev_ask_px = df.loc[i-1, "ask_px_00"]
-        prev_bid_sz = df.loc[i-1, "bid_sz_00"]
-        prev_ask_sz = df.loc[i-1, "ask_sz_00"]
+        prev_bid_px, prev_ask_px = df.loc[i-1, "bid_px_00"], df.loc[i-1, "ask_px_00"]
+        prev_bid_sz, prev_ask_sz = df.loc[i-1, "bid_sz_00"], df.loc[i-1, "ask_sz_00"]
+        curr_bid_px, curr_ask_px = df.loc[i, "bid_px_00"], df.loc[i, "ask_px_00"]
+        curr_bid_sz, curr_ask_sz = df.loc[i, "bid_sz_00"], df.loc[i, "ask_sz_00"]
 
-        curr_bid_px = df.loc[i, "bid_px_00"]
-        curr_ask_px = df.loc[i, "ask_px_00"]
-        curr_bid_sz = df.loc[i, "bid_sz_00"]
-        curr_ask_sz = df.loc[i, "ask_sz_00"]
+        bid_ofi = curr_bid_sz if curr_bid_px > prev_bid_px else (
+            curr_bid_sz - prev_bid_sz if curr_bid_px == prev_bid_px else -prev_bid_sz)
 
-        # ----------- Compute Bid-side OFI (buy orders) ------------
-        if curr_bid_px > prev_bid_px:
-            bid_ofi = curr_bid_sz
-        elif curr_bid_px == prev_bid_px:
-            bid_ofi = curr_bid_sz - prev_bid_sz
-        else:
-            bid_ofi = -prev_bid_sz
-
-        # ----------- Compute Ask-side OFI (sell orders) ------------ 
-        if curr_ask_px < prev_ask_px:
-            ask_ofi = -curr_ask_sz  
-        elif curr_ask_px == prev_ask_px:
-            ask_ofi = prev_ask_sz - curr_ask_sz
-        else:
-            ask_ofi = -prev_ask_sz
+        ask_ofi = -curr_ask_sz if curr_ask_px < prev_ask_px else (
+            prev_ask_sz - curr_ask_sz if curr_ask_px == prev_ask_px else -prev_ask_sz)
 
         ofi_values.append(bid_ofi - ask_ofi)
-
-    return pd.Series(
-        ofi_values, 
-        index=df.index, 
-        name="best_level_ofi"
-    )
+    return pd.Series(ofi_values, index=df.index, name="best_level_ofi")
 
 
 def compute_multi_level_ofi(
         df: pd.DataFrame, 
         levels: int = 10
-    ) -> pd.DataFrame:
+    ) -> pd.Series:
     """
-    Compute Multi-Level OFI for all levels from 0 to (levels-1).
-
+    Compute the multi-level order flow imbalance (OFI) for a given DataFrame. The OFI is calculated based on the bid and ask prices and sizes at multiple levels.
+    
     Args:
-        - df (pd.DataFrame): DataFrame with order book data. Should contain bid_px_0{level}, ask_px_0{level}, bid_sz_0{level}, ask_sz_0{level} columns.
-        - levels (int): Number of levels to compute OFI for. Default is 10.
+        - df (pd.DataFrame): DataFrame containing the bid and ask prices and sizes.
     
     Returns:
-        - pd.Series: A DataFrame with OFI values for each level (one per row, same length as df)
+        - pd.Series: A Series containing the multi-level OFI values.
     """
-
-    multi_level_ofi = {}
+    
+    ofi_matrix = []
     for lvl in range(levels):
-        bid_px_col = f"bid_px_0{lvl}"
-        ask_px_col = f"ask_px_0{lvl}"
-        bid_sz_col = f"bid_sz_0{lvl}"
-        ask_sz_col = f"ask_sz_0{lvl}"
-
-        ofi = [0]
+        bid_px, ask_px = f"bid_px_0{lvl}", f"ask_px_0{lvl}"
+        bid_sz, ask_sz = f"bid_sz_0{lvl}", f"ask_sz_0{lvl}"
+        level_ofi = [0]
         for i in range(1, len(df)):
-            prev_bid_px = df.loc[i-1, bid_px_col]
-            prev_ask_px = df.loc[i-1, ask_px_col]
-            prev_bid_sz = df.loc[i-1, bid_sz_col]
-            prev_ask_sz = df.loc[i-1, ask_sz_col]
+            prev_bid_px, prev_ask_px = df.loc[i-1, bid_px], df.loc[i-1, ask_px]
+            prev_bid_sz, prev_ask_sz = df.loc[i-1, bid_sz], df.loc[i-1, ask_sz]
+            curr_bid_px, curr_ask_px = df.loc[i, bid_px], df.loc[i, ask_px]
+            curr_bid_sz, curr_ask_sz = df.loc[i, bid_sz], df.loc[i, ask_sz]
 
-            curr_bid_px = df.loc[i, bid_px_col]
-            curr_ask_px = df.loc[i, ask_px_col]
-            curr_bid_sz = df.loc[i, bid_sz_col]
-            curr_ask_sz = df.loc[i, ask_sz_col]
+            bid_ofi = curr_bid_sz if curr_bid_px > prev_bid_px else (
+                curr_bid_sz - prev_bid_sz if curr_bid_px == prev_bid_px else -prev_bid_sz)
+            ask_ofi = -curr_ask_sz if curr_ask_px < prev_ask_px else (
+                prev_ask_sz - curr_ask_sz if curr_ask_px == prev_ask_px else -prev_ask_sz)
 
-            # ----------- Compute Bid-side OFI (buy orders) ------------
-            if curr_bid_px > prev_bid_px:
-                bid_ofi = curr_bid_sz
-            elif curr_bid_px == prev_bid_px:
-                bid_ofi = curr_bid_sz - prev_bid_sz
-            else:
-                bid_ofi = -prev_bid_sz
+            level_ofi.append(bid_ofi - ask_ofi)
+        ofi_matrix.append(level_ofi)
+    
+    return pd.Series(np.sum(ofi_matrix, axis=0), index=df.index, name="multi_level_ofi")
 
-            # ----------- Compute Ask-side OFI (sell orders) ------------ 
-            if curr_ask_px < prev_ask_px:
-                ask_ofi = -curr_ask_sz
-            elif curr_ask_px == prev_ask_px:
-                ask_ofi = prev_ask_sz - curr_ask_sz
-            else:
-                ask_ofi = -prev_ask_sz
 
-            ofi.append(bid_ofi - ask_ofi)
-        
-        multi_level_ofi[f"ofi_level_{lvl}"] = ofi
+def compute_integrated_ofi(
+        df: pd.DataFrame, 
+        levels: int = 10
+    ) -> pd.Series:
+    """
+    Compute the integrated order flow imbalance (OFI) for a given DataFrame. The OFI is calculated based on the bid and ask prices and sizes at multiple levels, and then PCA is applied to integrate the levels.
+    
+    Args:
+        - df (pd.DataFrame): DataFrame containing the bid and ask prices and sizes.
+    
+    Returns:
+        - pd.Series: A Series containing the integrated OFI values.
+    """
+    
+    ofi_matrix = []
+    for lvl in range(levels):
+        bid_px, ask_px = f"bid_px_0{lvl}", f"ask_px_0{lvl}"
+        bid_sz, ask_sz = f"bid_sz_0{lvl}", f"ask_sz_0{lvl}"
+        level_ofi = [0]
+        for i in range(1, len(df)):
+            prev_bid_px, prev_ask_px = df.loc[i-1, bid_px], df.loc[i-1, ask_px]
+            prev_bid_sz, prev_ask_sz = df.loc[i-1, bid_sz], df.loc[i-1, ask_sz]
+            curr_bid_px, curr_ask_px = df.loc[i, bid_px], df.loc[i, ask_px]
+            curr_bid_sz, curr_ask_sz = df.loc[i, bid_sz], df.loc[i, ask_sz]
 
-    return pd.DataFrame(multi_level_ofi, index=df.index)
+            bid_ofi = curr_bid_sz if curr_bid_px > prev_bid_px else (
+                curr_bid_sz - prev_bid_sz if curr_bid_px == prev_bid_px else -prev_bid_sz)
+            ask_ofi = -curr_ask_sz if curr_ask_px < prev_ask_px else (
+                prev_ask_sz - curr_ask_sz if curr_ask_px == prev_ask_px else -prev_ask_sz)
+
+            level_ofi.append(bid_ofi - ask_ofi)
+        ofi_matrix.append(level_ofi)
+    matrix = np.array(ofi_matrix).T
+    pca = PCA(n_components=1)
+    principal_component = pca.fit_transform(matrix).flatten()
+    weights = pca.components_[0]
+    integrated = principal_component / np.sum(np.abs(weights))
+    return pd.Series(integrated, index=df.index, name="integrated_ofi")
