@@ -13,13 +13,15 @@ def main():
     print(" -- Computing Integrated OFI")
     df["integrated_ofi"] = compute_integrated_ofi(df)
 
-    print(" -- Saving features to CSV: output/ofi_features.csv")
-    df.to_csv("output/ofi_features.csv", index=False)
-
     print(" -- Plotting features")
     plot_best_level_ofi(df)
     plot_multi_level_ofi(df)
     plot_integrated_ofi(df)
+
+    print(" -- Saving features to CSV: output/ofi_features.csv")
+    df = df[["ts_event", "ts_event", "rtype", "publisher_id", "instrument_id", "action", "side", "depth", "price", "size", "flags", "ts_in_delta", "sequence", "symbol", "best_level_ofi", "multi_level_ofi", "integrated_ofi"]]
+    df.to_csv("output/ofi_features.csv", index=False)
+    
 
 if __name__ == "__main__":
     start_time = time()
